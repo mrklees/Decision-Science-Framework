@@ -35,12 +35,20 @@ class Decision(object):
         pymc3.
         Args:
             name (str): Label for the variable.
-            dist (PyMC3 RV): PyMC3 Random Variable
+            dist (PyMC3 RV): A string describing the desired distribution
             params (tuple): tuple containing required parameters
         """
-        distribution = self.distribution_dict[dist]
+        # What if they submit a dist that doesn't exist?
+        try:
+            distribution = self.distribution_dict[dist]
+        except KeyError:
+            print(f"Input distrubtion not supported.  Choose one of the" +
+                  f" following: {self.distribution_dict.keys()}")
+            return None
+        # What if they don't submit all of the required parameters?
+        # TODO
         with self.model:
-            vars()[name] = distribution(name=name, **params)
+                vars()[name] = distribution(name=name, **params)
 
     def set_loss(self, formula_like):
         """Set loss using a patsy formula.
@@ -66,6 +74,3 @@ class Decision(object):
     def initialize_model(self):
         with pm.Model() as self.model:
             pass
-
-
-

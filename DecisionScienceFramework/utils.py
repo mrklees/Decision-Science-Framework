@@ -71,8 +71,11 @@ class DistFinder(object):
             final_mean = lognorm.mean(self.sigma, scale=exp(self.mu))
             final_interval = lognorm.interval(0.9, self.sigma, 
                                                 scale=exp(self.mu))
+            print(f"The fit parameters for this lognormal are mu: {self.mu}, s: {self.sigma} ")
         else:
             final_mean = beta.mean(a=self.alpha, b=self.beta)
             final_interval = beta.interval(0.9, a=self.alpha, b=self.beta)
+            print(f"The fit parameters for this beta are alpha: {self.alpha}, beta: {self.beta}")
+        
         print(f"The fit distribution has a mean of {final_mean} and a 90% CI" +
               f" of {final_interval}.")
