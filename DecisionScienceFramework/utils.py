@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import lognorm, beta, norm
+from scipy.stats import lognorm, beta, norm, binom
 from scipy.optimize import fmin
 from math import exp
 
@@ -13,7 +13,7 @@ class DistFinder(object):
     provdided estimate of the mean of the distribution.
     Class for approximating the paramteters of a log-normal distribution or
     a beta distribution.  Because they are flexible, asymetric distributions,
-    we need to incorporate the
+    we need to incorporate the desired mean as a part of the optimization.
     TODO: Add support for distributions that are currently in actions.py
     and are symmetrical.
     """
@@ -21,10 +21,17 @@ class DistFinder(object):
         self.lower_bound = lower
         self.upper_bound = upper
         self.ev = ev
+        self.test_dist_input(dist)
         self.dist = dist
-        self.optimize()
-        self.summary()
-        self.plot_fit()
+
+    @staticmethod
+    def test_dist_input(dist):
+        supported_dists = ['Normal', 'Binomial', 'Lognormal', 'Beta']
+        try:
+            assert dist in supported_dists
+        except AssertionError: 
+            print(f"Attempting to use unsupported distribution. Choose" + 
+                   " one from {supported_dists}")
 
     def lognormal_loss(self, x):
         mu, sigma = x
@@ -43,16 +50,22 @@ class DistFinder(object):
                (self.lower_bound - prop_low)**2
 
     def optimize(self):
-        if self.dist == lognorm:
+        # TODO: include other symmetric distribtuions
+        if self.dist == 'Normal':
+            # Normal is symmetric, so only some arithmetic is required.
+            self.mu, self.sigma = ((self.upper_bound + self.lower_bound) / 2,
+                                  (self.upper_bound - self.lower_bound) / 3.29)
+            return {'mu': self.mu, 'sd': self.sigma}
+        elif self.dist == 'Lognormal':
             self.mu, self.sigma = fmin(self.lognormal_loss,
                                        np.zeros(2),
                                        ftol=1e-8)
-            return self.mu, self.sigma                           
-        else:
+            return {'mu': self.mu, 'sd': self.sigma}
+        elif self.dist == 'Beta':
             self.alpha, self.beta = fmin(self.beta_loss,
                                          (0.5, 0.5),
                                          ftol=1e-8)
-            return self.alpha, self.beta
+            return {'alpha': self.alpha, 'beta': self.beta}
 
     def plot_fit(self):
         import matplotlib.pyplot as plt
@@ -60,10 +73,10 @@ class DistFinder(object):
 
         fig, axs = plt.subplots()
         if self.dist == lognorm:
-            sns.distplot(self.dist.rvs(self.sigma, scale=exp(self.mu), 
+            sns.distplot(lognorm.rvs(self.sigma, scale=exp(self.mu), 
                                        size=1000), ax=axs)
         else:
-            sns.distplot(self.dist.rvs(self.alpha, self.beta,
+            sns.distplot(beta.rvs(self.alpha, self.beta,
                                        size=1000), ax=axs)
     
     def summary(self):

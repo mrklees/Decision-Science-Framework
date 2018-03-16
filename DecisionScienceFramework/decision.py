@@ -2,6 +2,7 @@ import pickle
 import numpy as np
 import pymc3 as pm
 import patsy
+from DecisionScienceFramework.utils import DistFinder
 
 
 class Decision(object):
@@ -27,7 +28,10 @@ class Decision(object):
             "Binomial": {"n": 1, "p": 0.5}
         }
 
-    def add_variable(self, name, dist="Normal", params={"mu": 0, "sd": 1}):
+    def add_variable(self, name, dist, lower, upper, mode=None):
+        params
+
+    def _add_variable(self, name, dist="Normal", params={"mu": 0, "sd": 1}):
         """Add a variable to the decision.
 
         This method allows us to build a decision model one variable
