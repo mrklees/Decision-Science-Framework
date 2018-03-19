@@ -11,6 +11,7 @@ class Decision(object):
         self.file_path = fp
         self.initialize_model()
         self.loss = None
+        self.last_run = None
         self.distribution_dict = {
             "Normal": pm.Normal,
             "Lognormal": pm.Lognormal,
@@ -28,10 +29,12 @@ class Decision(object):
             "Binomial": {"n": 1, "p": 0.5}
         }
 
-    def add_variable(self, name, dist, lower, upper, mode=None):
-        params
+    def add_variable_from_ci(self, name, dist, lower, upper, mode=None):
+        # Calculate parameters 
+        params = DistFinder(lower=lower, upper=upper, ev=mode, dist=dist).optimize()
+        self.add_variable_from_params(name, dist, params=params)
 
-    def _add_variable(self, name, dist="Normal", params={"mu": 0, "sd": 1}):
+    def add_variable_from_params(self, name, dist="Normal", params={"mu": 0, "sd": 1}):
         """Add a variable to the decision.
 
         This method allows us to build a decision model one variable
@@ -46,7 +49,7 @@ class Decision(object):
         try:
             distribution = self.distribution_dict[dist]
         except KeyError:
-            print(f"Input distrubtion not supported.  Choose one of the" +
+            print("Input distrubtion not supported.  Choose one of the" +
                   f" following: {self.distribution_dict.keys()}")
             return None
         # What if they don't submit all of the required parameters?
@@ -54,21 +57,36 @@ class Decision(object):
         with self.model:
                 vars()[name] = distribution(name=name, **params)
 
+    def add_variable_from_patsy(self, name, formula_like):
+        """We are often constructing new deterministic vars from existing ones
+        
+        This facilitates that by name with Patsy.
+        """
+        if self.last_run is None:
+            self.sample(5000)
+        var = patsy.dmatrix(f"I({formula_like}) - 1", data=self.last_run)
+        self.last_run[name] = np.asarray(var)
+
     def set_loss(self, formula_like):
         """Set loss using a patsy formula.
 
+        Requires that samples have already been drawn.
         See the documentation:
         https://patsy.readthedocs.io/en/latest/formulas.html
         for more information on patsy formulas. Currently we only support
         formulas that contain single word variables or you can wrap a
         multi-word variable in Q() like so: Q("Variable Name").
         """
+        if self.last_run is None:
+            self.sample(5000)
         loss = patsy.dmatrix(f"I({formula_like}) - 1", data=self.last_run)
         self.last_run['loss'] = np.asarray(loss)
 
     def sample(self, nsamples):
         with self.model:
-            trace = pm.sample(nsamples, tune=500)
+            # TODO: Figure out what the fucking deal is with running multiple jobs.
+            # Ends with a compile error more times than not.
+            trace = pm.sample(nsamples, tune=500, njobs=1)
             self.last_run = pm.backends.tracetab.trace_to_dataframe(trace)
 
     def save_state(self):
