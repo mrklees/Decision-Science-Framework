@@ -1,4 +1,5 @@
 # Core Python
+from collections import OrderedDict
 import pickle
 
 # Anaconda
@@ -18,8 +19,9 @@ class Decision(object):
         self.file_path = fp
         self.initialize_model()
         self.last_run = None
-        self.random = {}
-        self.deterministic = {}
+        self.random = OrderedDict()
+        self.deterministic = OrderedDict()
+        self.information_values = OrderedDict()
         self.distribution_dict = {
             "Normal": pm.Normal,
             "Lognormal": pm.Lognormal,
@@ -88,6 +90,7 @@ class Decision(object):
         We split this out only so that we could norm on the loss column name.
         """
         self.add_variable_from_patsy('loss', formula_like)
+        self.last_run['isLoss'] = np.where(self.last_run.loss < 0, 1, 0)
 
     def sample(self, nsamples):
         with self.model:
@@ -136,9 +139,15 @@ class Decision(object):
 
     def evpi(self):
         for column in school_decision.random.keys():
+            self.information_values[column] = self._calculate_evpi(column)
             print(f"{column}: {self._calculate_evpi(column)}")
 
     def _calculate_evpi(self, column):
+        """Calculate information value for a single specified variable
+        
+        Our information value 
+        """
+
         baseline_uncertainty = self.last_run['loss'].mean()
         mu = self.last_run[column].mean()
         fixed = self.last_run.copy()
