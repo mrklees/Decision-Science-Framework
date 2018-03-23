@@ -164,7 +164,7 @@ class Decision(object):
         pass
 
     def evpi(self):
-        for column in school_decision.random.keys():
+        for column in self.random.keys():
             self.information_values[column] = self._calculate_evpi(column)
             print(f"{column}: {self._calculate_evpi(column)}")
 
@@ -178,13 +178,14 @@ class Decision(object):
         mu = self.last_run[column].mean()
         fixed = self.last_run.copy()
         fixed[column] = mu
-        for key, item in school_decision.deterministic.items():
+        for key, item in self.deterministic.items():
             var = patsy.dmatrix(f"I({item}) - 1", data=fixed)
             fixed[key] = np.asarray(var)
         updated_uncertainty = self.eol(fixed)
         return baseline_uncertainty - updated_uncertainty
 
-    def eol(self, samples):
+    @staticmethod
+    def eol(samples):
         """Calculate the Expected Opportunity Loss for a given set of samples
         
         First we consider the Expected Loss over our sample. This indicates what our "default" position should be. If 
