@@ -9,8 +9,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pymc3 as pm
 import patsy
+import pymc3 as pm
 
 from DecisionScienceFramework.utils import DistFinder
 
@@ -188,15 +188,29 @@ class Decision(object):
     def eol(samples):
         """Calculate the Expected Opportunity Loss for a given set of samples
         
-        First we consider the Expected Loss over our sample. This indicates what our "default" position should be. If 
-        it is negative (which corresponds to a positive outcome), then we decide to accepting the proposal.  Otherwise if the
-        expected loss is positive, then we default to declining the proposal.  Given that default, the Expected Opportunity
-        Loss is thus the average outcome if we had done the opposite.  So we sum up the losses where, if we accepted the proposal, 
-        then that declining the proposal would have actually been the right decision and divide that over the total number of
-        simulations considered.
+        First we consider the Expected Loss over our sample. This indicates 
+        what our "default" position should be. If it is negative (which 
+        corresponds to a positive outcome), then we decide to accepting the
+        proposal.  Otherwise if the expected loss is positive, then we default
+        to declining the proposal.  Given that default, the Expected Opportunity
+        Loss is thus the average outcome if we had done the opposite.  So we 
+        sum up the losses where, if we accepted the proposal, then that 
+        declining the proposal would have actually been the right decision and
+        divide that over the total number of simulations considered.
         """
         exp_loss = samples.loss.mean()
         if exp_loss < 0:
             return sum(samples[samples.loss > 0].loss) / samples.shape[0]
         else:
             return sum(samples[samples.loss < 0].loss) / samples.shape[0]
+
+    @staticmethod
+    def get_interval(alpha, samples):
+        """Yields the interval between alhpa and 1-alpha
+        
+        Use this for calculations like "95% of values fall between (a, b)"
+        """
+        loss_vec = samples.sort_values('loss', ascending=True).loss
+        min_ix = int(loss_vec.shape[0]*alpha)
+        max_ix = int(loss_vec.shape[0]*(1-alpha))
+        return loss_vec.iloc[min_ix], loss_vec.iloc[max_ix]  
